@@ -4,27 +4,77 @@ author: "Shan Jiang"
 date: "11/16/2018"
 output: html_document
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+## problem 1
+```{r}
+library(tidyverse)
+library(broom)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+### Import the raw data.
+require(RCurl)
+homicide_raw = read.csv( text = getURL("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv")) 
 ```
 
-## Including Plots
+### 1.1 Tidy the dataset
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+homicide_df = homicide_raw %>% 
+  mutate(city_state = str_c(city, state, sep = "," )) %>% 
+  mutate(city_state = as.factor(city_state)) %>% 
+  group_by(city_state) %>% ## add the binary variable 
+  filter(!city_state %in% c("Dallas,TX", "Phoenix,AZ","Kansas City,MO","Tulsa,AL" )) %>%
+  mutate(case_status = ifelse(disposition == "Closed by arrest", 0, 1)) %>%
+   ### relevel `victim_race`
+  mutate(victim_race = fct_collapse(victim_race,  
+           non_white = c("Hispanic","Black", "Asian", "Other", "Unknown"),
+           white = "White")) %>% 
+  mutate(victim_race = fct_relevel(victim_race, "white")) %>% 
+  ## change the victim_age as numeric
+  mutate(victim_age = as.numeric(victim_age)) 
+  
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Since there are three levels for the factor of disposition, we need to recode it as whether the homicide is solved or not: for *Closed by arrest*, we coined it as 0 while  adding 1 for "*Open/No arrest*" or "*closed without arrest*".
+
+* For categories white and non-white, with white as the reference category. 
+
+
+### 1.2 Simulation
+
+For the city of Baltimore, MD, use the `glm` function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race (as just defined) as predictors. 
+
+```{r}
+
+MLR = glm(case_status ~ victim_age + victim_sex + victim_race ,data = homicide_df) %>% 
+  broom::tidy()
+
+## Obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing black victims to white victims keeping all other variables fixed.
+
+
+
+```
+
+Now run glm for each of the cities in your dataset. 
+
+
+Extract the adjusted odds ratio (and CI) for solving homicides comparing black victims to white victims. 
+
+Do this within a “tidy” pipeline, making use of `purrr::map`, `list columns`, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
+
+```{r}
+
+
+
+```
+
+
+Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
+
+
+## Problem 2
+
+```{r}
+
+```
+
