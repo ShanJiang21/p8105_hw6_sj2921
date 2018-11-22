@@ -54,8 +54,8 @@ fit_logistic =
 fit_logistic %>% 
   broom::tidy() %>% 
   mutate(OR = exp(estimate)) %>%
-  mutate(CI.lower =  exp(estimate) - std.error * statistic) %>% 
-  mutate(CI.higher =  exp(estimate) + std.error * statistic) %>%
+  mutate(CI.lower =  exp(estimate - std.error * statistic)) %>% 
+  mutate(CI.higher =  exp(estimate + std.error * statistic)) %>%
   select(term, log_OR = estimate, OR, p.value, CI.lower, CI.higher) %>% 
   knitr::kable(digits = 3)
 ```
@@ -66,37 +66,46 @@ Do this within a “tidy” pipeline, making use of `purrr::map`, `list columns`
 
 ```{r}
 ## Create a list column for the city_state dataset
-homicide_nest = 
+homicide_nest = homicide_df %>% 
+  group_by(city_state) %>% 
   nest(homicide_df, victim_race:case_status)
+
 head(homicide_nest)
 
 ## Create a glm function 
 homicide_glm  = function(df) {
-  glm = glm(case_status ~ victim_age + victim_race + victim_sex, data = homicide_df) %>% 
-        broom::tidy() %>% 
-        mutate(OR = exp(estimate)) %>%
-        mutate(CI.lower =  exp(estimate) - std.error * statistic) %>% 
-        mutate(CI.higher =  exp(estimate) + std.error * statistic) 
+  glm = glm(case_status ~ victim_age + victim_race + victim_sex, data = homicide_df, family = binomial()) %>% 
+        broom::tidy() 
+       
      glm 
 }
 
 
 ## Apply to each city, state 
-map(homicide_nest$data, homicide_glm )  
 
  homicide_nest =  homicide_nest %>% 
-    mutate(models = map(homicide_nest$data, homicide_glm ))
-
- homicide_nest %>% 
-  unnest()
+    mutate(models = map(homicide_nest$data, homicide_glm )) %>% 
+    select(-data) %>% 
+    unnest() %>% 
+    mutate(OR = exp(estimate)) %>%
+        mutate(CI.low =  exp(estimate - std.error * statistic) ) %>% 
+        mutate(CI.high =  exp(estimate + std.error * statistic)) %>% 
+        filter(term == "victim_racenon_white") %>% 
+        select(term, log_OR = estimate, OR, p.value, CI.lower, CI.higher) 
 ```
 
 Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
 
 ```{r}
 homicide_nest %>% 
-ggplot( aes( x = city_state , y = OR)) +
-  geom_bar()
+ mutate(city_state = fct_reorder(city_state, OR)) %>% 
+  ggplot(aes(x = city_state, y = OR)) + 
+  geom_point() + 
+  geom_errorbar(mapping = aes(ymin = CI.low, ymax = CI.high )) +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 90, size = 8))
 
 
 ```
@@ -104,8 +113,25 @@ ggplot( aes( x = city_state , y = OR)) +
 
 ## Problem 2
 
+### Importation and cleaning the data 
 ```{r}
-birth_weight = read_csv("./Data/birthweight.csv")
+birth_weight = read_csv("./Data/birthweight.csv") 
+  
+birth_weight = birth_weight %>% 
+    mutate(babysex = as.factor(babysex)) %>% 
+    mutate(bhead = as.numeric(bhead), 
+            mrace = as.factor(mrace),
+            frace = as.factor(frace) ,
+            bwt = as.numeric(bwt)) %>% 
+    mutate(mheight = as.numeric(mheight)) %>% 
+    mutate(mheight = as.numeric(mheight)) 
+  
+  
+      
+  
+  
+
+
 ```
 
 There are `nrow(birth_weight)` observations and `ncol(birth_weight)` variables in the dataset. 
