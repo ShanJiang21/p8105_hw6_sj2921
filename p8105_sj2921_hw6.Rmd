@@ -141,28 +141,41 @@ birth_weight = birth_weight %>%
            mrace = as.factor(mrace),
            frace = as.factor(frace)) %>% 
     mutate(bhead = as.numeric(bhead), 
-            bwt = as.numeric(bwt),
-            mheight = as.numeric(mheight),
-            mheight = as.numeric(mheight)) 
+            bwt = as.numeric(bwt * 0.00220462),
+            mheight = as.numeric(mheight ),
+            mheight = as.numeric(mheight )) 
 
 # no missing data
 skimr::skim(birth_weight )
 
 ```
 
-```{r}
-##
-summary(birth_weight$pnumlbw )
-
-```
-
 * There are `nrow(birth_weight)` observations and `ncol(birth_weight)` variables in the dataset. There are 4 factors as babysex, presence of malformations, mother and father's race. Remaining variables are of numeric format.
 
-* There are 2 variables containing many 0 as their observation value: `pnumlbw ` and `pnumsga` in the birth weight data.
+* We need to transform the Unit of the `bwt` into pounds because it is consistent with other variables measured in pounds.
 
 
-2. Model procedure: stepwise elimination 
+2. Model procedure: 
 
+(1) Exploration of correlation and distribution.
+
+```{r}
+## Distribution of outcome variable
+birth_weight %>% 
+  ggplot(aes(x = bwt, y = ..density..)) + 
+  geom_histogram() +
+  geom_density(aes(color = "red"))
+```
+
+The distribution of `birthweight` is quite normal, which satisfies the linear regression model assumptions.
+
+```{r}
+## Excluding two variables contatining many 0s.
+summary(birth_weight$pnumlbw )
+summary(birth_weight$pnumsga)
+```
+
+* There are 2 variables containing all 0s as their observation value: `pnumlbw ` and `pnumsga` in the birth weight data, we would **exclude** them in our model.
 
 ```{r}
 ## Exploration of correlation for numeric variables in dataset.
@@ -176,13 +189,39 @@ correlation_df %>%
   knitr::kable()
 ```
 
+
+The **hypothesis only model** is based on variables more relevant to **physical aspects** of:
+
+1. Baby's sex(which can be a potential interaction term, we may stratify our analysis by sex);
+
+2. Both the `babies length` and `head circumference` which are most likely to influence the babies' weight, however, it is unlikely to intervene the baby longer or have a larger head.
+
+3. Also, the health status of mother who gave birth to the baby is also important, this model contains the gestational age in weeks, mother’s weight gain, height,and so on. The most obvious one is mother’s age at delivery (a strong negative correlation in literature), the birth history, measured by `parity`, can provide important context for understanding mom's health, the average number of cigarettes smoked during the pregnancy, which is a significant exposure for affecting child's health is also included in the model.  
+
+4. Meanwhile, I chose family monthly income as an indicator of SES of the family, which can be informative for important social factor for analysis.
+
+5. The `mheigth`(mother’s height) 
+
+
+
+
+(2) Stepwise elimination 
+
 Start with a full regression model for birthweight.
 
 ```{r}
-## Stepwise 
-full_mlr = lm(bwt ~ ., data = birth_weight )
+## Stepwise with full model, after excluding two variables 
+full_mlr = lm(bwt ~ babysex + frace + mrace + malform +
+     bhead + blength + fincome + gaweeks+ menarche + mheight + momage + 
+     parity + ppbmi + smoken + wtgain, data = birth_weight )
+summary(full_mlr)
+```
 
+* From the exploration analysis, we can see that the `ppwt`, `delwt` and `wtgain` are highly collinearlized because we can simply derive the weight gain `wtgain` from the first two variables, and it implies that the `wegain` is a linear combination of the `ppwt`, `delwt`.  So we have to drop the `wtgain` if we want to include the `ppwt` and `delwt`at the same time. For parsimonous reason, we would only include `wtgain`in our model. 
 
+* The full model has an R-square of 0.7116 and the adjusted R-square is 0.7106. 
+
+* 
 
 
 
