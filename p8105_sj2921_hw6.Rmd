@@ -2,7 +2,7 @@
 title: "p8105_hw6_sj2921"
 author: "Shan Jiang"
 date: "11/16/2018"
-output: html_document
+output: github_document
 ---
 ## problem 1
 ```{r}
@@ -12,8 +12,8 @@ library(broom)
 
 ```{r}
 ### Import the raw data.
-require(RCurl)
-homicide_raw = read.csv( text = getURL("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv")) 
+
+homicide_raw = read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv")
 ```
 
 ### 1.1 Tidy the dataset
@@ -21,15 +21,11 @@ homicide_raw = read.csv( text = getURL("https://raw.githubusercontent.com/washin
 ```{r}
 homicide_df = homicide_raw %>% 
   mutate(city_state = str_c(city, state, sep = "," )) %>% 
-  mutate(city_state = as.factor(city_state)) %>% 
-  group_by(city_state) %>% ## add the binary variable 
+  mutate(case_status = as.numeric(disposition == "Closed by arrest")) %>% 
   filter(!city_state %in% c("Dallas,TX", "Phoenix,AZ","Kansas City,MO","Tulsa,AL" )) %>%
-  mutate(case_status = ifelse(disposition == "Closed by arrest", 0, 1)) %>%
    ### relevel `victim_race`
-  mutate(victim_race = fct_collapse(victim_race,  
-           non_white = c("Hispanic","Black", "Asian", "Other", "Unknown"),
-           white = "White")) %>% 
-  mutate(victim_race = fct_relevel(victim_race, "white")) %>% 
+  mutate(victim_race = 
+           fct_relevel(ifelse(victim_race == "White", "white", "non-white"), "white")) %>% 
   ## change the victim_age as numeric
   mutate(victim_age = as.numeric(victim_age)) 
   
@@ -37,28 +33,32 @@ homicide_df = homicide_raw %>%
 
 Since there are three levels for the factor of disposition, we need to recode it as whether the homicide is solved or not: for *Closed by arrest*, we coined it as 0 while  adding 1 for "*Open/No arrest*" or "*closed without arrest*".
 
-* For categories white and non-white, with white as the reference category. 
+For categories white and non-white, with white as the reference category. 
 
 
 ### 1.2 Simulation
 
+(1)  Baltimore, MD Models 
 For the city of Baltimore, MD, use the `glm` function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, race(as just classified) and sex as predictors. 
 
 ```{r}
-fit_logistic = 
+Bal_logit = 
   homicide_df %>% 
-  filter(city == "Baltimore") %>% 
-  glm(case_status ~ victim_age + victim_race + victim_sex, data = .) 
+  filter(city_state == "Baltimore,MD") %>% 
+  glm(case_status ~ victim_age  + victim_sex + victim_race , data = ., family = binomial) 
 
 ## Obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing non-white victims to white victims keeping all other variables fixed.
-fit_logistic %>% 
+Bal_logit %>% 
   broom::tidy() %>% 
-  mutate(OR = exp(estimate)) %>%
-  mutate(CI.lower =  exp(estimate - std.error * statistic)) %>% 
-  mutate(CI.higher =  exp(estimate + std.error * statistic)) %>%
-  select(term, log_OR = estimate, OR, p.value, CI.lower, CI.higher) %>% 
+  mutate(OR = exp(estimate)) %>%  ## sig.level = 0.05, critical value = 1.96
+  mutate(CI.lower =  exp(estimate - std.error * 1.96)) %>% 
+  mutate(CI.higher =  exp(estimate + std.error * 1.96)) %>%
+  select(term, log_OR = estimate, OR, CI.lower, CI.higher, p.value) %>% 
   knitr::kable(digits = 3)
 ```
+
+*Comment*: the estimator of odds ratio is 0.441 < 1 (95% CI: [0.313, 0.620]), implying that in Baltimore city, the odds of being murdered is 0.441 times lower among non-white citizens than white. Because the odds ratio is under 1, which means being non-white can exert protective effect for avoiding being murdered.  
+
 
 ## Each city:Compare the white and non-white values 
 
@@ -66,9 +66,10 @@ Do this within a “tidy” pipeline, making use of `purrr::map`, `list columns`
 
 ```{r}
 ## Create a list column for the city_state dataset
+
 homicide_nest = homicide_df %>% 
   group_by(city_state) %>% 
-  nest(homicide_df, victim_race:case_status)
+  nest(victim_race:case_status)
 
 head(homicide_nest)
 
@@ -88,11 +89,13 @@ homicide_glm  = function(df) {
     select(-data) %>% 
     unnest() %>% 
     mutate(OR = exp(estimate)) %>%
-        mutate(CI.low =  exp(estimate - std.error * statistic) ) %>% 
-        mutate(CI.high =  exp(estimate + std.error * statistic)) %>% 
+        mutate(CI.low =  exp(estimate - std.error * 1.96) ) %>% 
+        mutate(CI.high =  exp(estimate + std.error * 1.96)) %>% 
         filter(term == "victim_racenon_white") %>% 
         select(term, log_OR = estimate, OR, p.value, CI.lower, CI.higher) 
 ```
+
+## Plot 
 
 Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
 
@@ -106,7 +109,6 @@ homicide_nest %>%
   theme(legend.position = "bottom",
         legend.direction = "horizontal",
         axis.text.x = element_text(angle = 90, size = 8))
-
 
 ```
 
