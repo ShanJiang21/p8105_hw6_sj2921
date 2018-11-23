@@ -8,6 +8,7 @@ output: github_document
 ```{r}
 library(tidyverse)
 library(broom)
+library(Hmisc)
 ```
 
 ```{r}
@@ -105,21 +106,21 @@ city_murder = city_murder %>%
 
 Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
 
-```{r}
+```{r out.width = "70%", fig.height = 7, fig.align = "center"}
 city_murder %>% 
   ggplot(aes(x = city_state, y = OR)) + 
   geom_point(alpha = 0.52) +
   geom_errorbar(mapping = aes(ymin = CI.low, ymax = CI.high, colour = "darkred" )) +
-  theme_classic() +
-  theme(legend.position = "bottom",
+  theme_bw() +
+  theme(legend.position = "none",
         legend.direction = "horizontal",
-        axis.text.x = element_text(angle = 90, size = 7.5)) + 
+         legend.key.size = unit(0.06, "cm")) + 
   coord_flip() + 
-      labs(x = "State",
-           y = "State Homicide Odds ratio", 
-           title = "Homicide rates 2013-2015 by State", 
+      labs(x = "City State",
+           y = "City Homicide Odds ratio", 
+           title = "Homicide Odds ratio of race white vs. Non-white by City, state", 
            subtitle = "Error Bar Using mean as center with Confidence Intervals", 
-           caption = "source: Washington Post") + theme_bw()
+           caption = "source: Washington Post") 
 
 ```
 
@@ -130,20 +131,24 @@ city_murder %>%
 ```{r}
 birth_weight = read_csv("./Data/birthweight.csv") 
   
+
 birth_weight = birth_weight %>% 
-    mutate(babysex = as.factor(babysex)) %>% 
+    janitor::clean_names() %>% 
+    mutate(babysex = as.factor(babysex),
+           malform = as.factor(malform),
+           mrace = as.factor(mrace),
+           frace = as.factor(frace)) %>% 
     mutate(bhead = as.numeric(bhead), 
-            mrace = as.factor(mrace),
-            frace = as.factor(frace) ,
-            bwt = as.numeric(bwt)) %>% 
-    mutate(mheight = as.numeric(mheight)) %>% 
-    mutate(mheight = as.numeric(mheight)) 
-  
-  
+            bwt = as.numeric(bwt),
+            mheight = as.numeric(mheight),
+            mheight = as.numeric(mheight)) 
+
+# no missing data
+skimr::skim(birth_weight )
     
 ```
 
-There are `nrow(birth_weight)` observations and `ncol(birth_weight)` variables in the dataset. 
+There are `nrow(birth_weight)` observations and `ncol(birth_weight)` variables in the dataset. There are 4 factors as babysex, presence of malformations, mother and father's race. Remaining variables are of numeric format.
 
 
 2. Model procedure: stepwise elimination 
