@@ -147,17 +147,25 @@ birth_weight = birth_weight %>%
 
 # no missing data
 skimr::skim(birth_weight )
-    
+
 ```
 
-There are `nrow(birth_weight)` observations and `ncol(birth_weight)` variables in the dataset. There are 4 factors as babysex, presence of malformations, mother and father's race. Remaining variables are of numeric format.
+```{r}
+##
+summary(birth_weight$pnumlbw )
+
+```
+
+* There are `nrow(birth_weight)` observations and `ncol(birth_weight)` variables in the dataset. There are 4 factors as babysex, presence of malformations, mother and father's race. Remaining variables are of numeric format.
+
+* There are 2 variables containing many 0 as their observation value: `pnumlbw ` and `pnumsga` in the birth weight data.
 
 
 2. Model procedure: stepwise elimination 
 
-a regression model for birthweight: 
+
 ```{r}
-## Exploration of correlation 
+## Exploration of correlation for numeric variables in dataset.
 correlation_df = birth_weight %>%
   select(-babysex, -frace, -mrace, -malform) %>% 
   cor(.[3], .) %>% 
@@ -166,11 +174,38 @@ correlation_df = birth_weight %>%
 
 correlation_df %>% 
   knitr::kable()
+```
+
+Start with a full regression model for birthweight.
+
+```{r}
+## Stepwise 
+full_mlr = lm(bwt ~ ., data = birth_weight )
+
+
+
+
 
 ## Cross Validation 
 set.seed(1)
 
 cv_df = crossv_mc(birth_weight, 100) 
+
+## Train data sets and test data sets
+cv_df %>% 
+  pull(train) %>% 
+  .[[1]] %>% 
+  as_tibble
+cv_df %>% 
+  pull(test) %>% 
+  .[[1]] %>% 
+  as_tibble
+
+
+cv_df =
+  cv_df %>% 
+  mutate(train = map(train, as_tibble),
+         test = map(test, as_tibble))
 
 cv_df = 
   cv_df %>% 
@@ -191,6 +226,13 @@ ggplot(aes(x = fincome, y =  bwt )) +
 
 
 
+```
+
+3. fit a model and plot
+```{r}
+birth_weight %>%  
+  ggplot(aes(x = blength , y = bwt )) + 
+  geom_point(alpha = .5)
 ```
 
 
