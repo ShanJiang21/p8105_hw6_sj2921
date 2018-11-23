@@ -9,6 +9,8 @@ output: github_document
 library(tidyverse)
 library(broom)
 library(Hmisc)
+library(modelr)
+library(mgcv)
 ```
 
 ```{r}
@@ -155,6 +157,39 @@ There are `nrow(birth_weight)` observations and `ncol(birth_weight)` variables i
 
 a regression model for birthweight: 
 ```{r}
+## Exploration of correlation 
+correlation_df = birth_weight %>%
+  select(-babysex, -frace, -mrace, -malform) %>% 
+  cor(.[3], .) %>% 
+  broom::tidy() %>% 
+  select(-.rownames, -bwt) 
+
+correlation_df %>% 
+  knitr::kable()
+
+## Cross Validation 
+set.seed(1)
+
+cv_df = crossv_mc(birth_weight, 100) 
+
+cv_df = 
+  cv_df %>% 
+  mutate(lin_mod1    = map(train, ~lm(bwt ~ babysex + fincome + gaweeks + parity + smoken + wtgain, , data = .x)),
+         lin_ = map(train, ~lm( , data = .x)),
+         lin_comb = map(train, ~lm(bwt ~ babysex + fincome + gaweeks + parity + smoken + wtgain data = .x))) %>% 
+  mutate(rmse_lin    = map2_dbl(lin_mod, test, ~rmse(model = .x, data = .y)),
+         rmse_nonlin = map2_dbl(nonlin_mod, test, ~rmse(model = .x, data = .y)),
+         rmse_wiggly = map2_dbl(wiggly_mod, test, ~rmse(model = .x, data = .y)))
+
+
+lin_mod = lm(y ~ x, data = birth_weight)
+birth_weight %>% 
+ggplot(aes(x = fincome, y =  bwt )) + 
+       geom_point() + 
+       theme_bw()
+
+
+
 
 ```
 
