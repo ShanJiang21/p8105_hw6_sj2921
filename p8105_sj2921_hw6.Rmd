@@ -11,6 +11,7 @@ library(broom)
 library(Hmisc)
 library(modelr)
 library(mgcv)
+library(ggplot2)
 ```
 
 ```{r}
@@ -164,10 +165,21 @@ skimr::skim(birth_weight )
 
 ```{r}
 ## Distribution of outcome variable
-birth_weight %>% 
+library("gridExtra")
+his = birth_weight %>% 
   ggplot(aes(x = bwt, y = ..density..)) + 
   geom_histogram() +
-  geom_density(aes(color = "red"))
+  geom_density(color = "red") +
+  ggtitle("Histogram of birthweight variable")
+
+box = birth_weight %>% 
+  ggplot(aes(y = bwt)) + 
+  labs(y = "birthweight") +
+  geom_boxplot() +
+  ggtitle("Boxplot of birthweight variable")
+
+grid.arrange(his, box, nrow = 1, top = "Distribution of outcome variable-Birthweight") 
+
 ```
 
 The distribution of `birthweight` is quite normal, which satisfies the linear regression model assumptions.
@@ -224,6 +236,7 @@ summary(full_mlr)
 
 * The full model has an R-square of 0.7116 and the adjusted R-square is 0.7106. 
 
+```{r}
 ## Cross Validation 
 set.seed(1)
 
@@ -260,11 +273,8 @@ birth_weight %>%
 ggplot(aes(x = fincome, y =  bwt )) + 
        geom_point() + 
        theme_bw()
-
-
-
-
 ```
+
 
 3. fit a model and plot
 ```{r}
