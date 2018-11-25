@@ -199,13 +199,20 @@ correlation_df = birth_weight %>%
   cor(.[3], .) %>% 
   broom::tidy() %>% 
   select(-.rownames, -bwt) 
-
+## Filtering the variables which have a correlation with bwt as of higher than 0.2.
 correlation_df %>% 
-  knitr::kable()
+  mutate(index = 1) %>% 
+  gather(index,bhead:wtgain, factor_key = TRUE) %>%
+  mutate( value = `bhead:wtgain`, 
+          variable = index ) %>% 
+  select(variable, value ) %>% 
+  filter(abs(value) > 0.2) %>% 
+    knitr::kable(digits = 4) 
 ```
 
 
-The **hypothesis only model** is based on variables more relevant to **physical aspects** of:
+
+I. The **hypothesis only model** is based on variables more relevant to **physical aspects** of:
 
 1. Baby's sex(which can be a potential interaction term, we may stratify our analysis by sex);
 
@@ -217,6 +224,23 @@ The **hypothesis only model** is based on variables more relevant to **physical 
 
 5. Correlation and Collinearity: The `mheigth`(mother’s height) and `ppbmi`(mother’s pre-pregnancy BMI) is clearly correlated, also we can see that the `ppwt`, `delwt` and `wtgain` are highly collinearlized because we can simply derive the weight gain `wtgain` from the first two variables, and it implies that the `wegain` is a linear combination of the `ppwt`, `delwt`.  So we have to drop the `wtgain` if we want to include the `ppwt` and `delwt`at the same time. For parsimonous reason, we would only include `wtgain`in our model. 
 
+II. For constructing a model precisely correlated with the outcome variable, we simply do a correlation matrix with the birthweight.
+
+III. Combination of birthweight literature and data-driven model-building 
+
+
+#### based on a hypothesized structure for the factors that underly birthweight
+```{r}
+
+```
+
+
+
+#### Combination of birthweight literature and data-driven model-building 
+
+```{r}
+
+```
 
 (2) Stepwise elimination 
 
