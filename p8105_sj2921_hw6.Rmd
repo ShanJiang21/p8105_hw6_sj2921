@@ -284,7 +284,7 @@ The combined model owns the highest R square value 0.7181 and a high adjusted-R 
 
 ### 2.Cross Validation 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 set.seed(1)
 
 cv_df = crossv_mc(birth_weight, 100) 
@@ -313,7 +313,7 @@ cv_df <- cv_df %>%
 
 I’m mostly focused on RMSE as a way to compare these models, and the plot below shows the distribution of RMSE values for each candidate model.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 cv_df %>% 
   select(starts_with("rmse")) %>% 
   gather(key = model, value = rmse) %>% 
@@ -323,7 +323,95 @@ cv_df %>%
   ggtitle("Volin plot of RMSE in each candidate model")
 ```
 
-Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+Specific value of RMSE 
+```{r}
+cv_df %>% 
+  select( rmse_hyp, rmse_Corr, rmse_Comb) %>% 
+  gather(key = model, value = rmse) %>% 
+  group_by(model) %>% 
+  summarise(mean(rmse)) %>% 
+  mutate(rmse = `mean(rmse)`) %>% 
+  select(-`mean(rmse)`) %>% 
+  knitr::kable(digits = 4)
+  
+```
+
+From the violin plot, we can see that the hyp model is  worse than the latter 2 models as the RMSE is much higher. As the combined model maintains the lowest RMSE in the model, we may select this one, but it worth more thinking. 
+
+Comparatively speaking, rmse_hyp equals to 0.9367, which is pretty high, so we may not choose the hypothesized model.
+
+
+### 4. Final model plots 
+
+show a plot of model residuals against fitted values – use `add_predictions` and add_residuals in making this plot.
+
+we choose the combined model in the above, containing all proposed variables in the model.
+
+```{r}
+# creating model using combined model
+
+final_mod <- birth_weight %>% 
+  lm(bwt ~ babysex + bhead + blength + 
+                    mrace  + fincome + gaweeks + mheight + 
+                    parity + smoken + wtgain + delwt , data = .) 
+
+birth_weight %>% 
+  add_predictions(final_mod) %>% 
+  add_residuals(final_mod) %>% 
+  ggplot(aes(x = pred, y = resid)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE) + 
+  labs( 
+       x = "Predicted value", 
+       y = "Residual") +
+  ggtitle("Predicted values vs. residuals plot for Final model")
+
+```
+
+From the fitted line and the obs point graph, we can see that the residual is high at the low value,meaning that there are some outliers when pv is low.
+
+### Comparison with other 2 models
+
+```{r}
+cv_df2 <- crossv_mc(birth_weight, 100)
+
+cv_df2 <- cv_df2 %>% 
+  mutate(Comb_mod = map(train, ~lm(bwt ~ babysex + bhead + blength + 
+                    mrace  + fincome + gaweeks + mheight + 
+                    parity + smoken + wtgain + delwt , data = .x)), 
+         main_mod = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)), 
+         other_mod = map(train, ~lm(bwt ~ (bhead * blength * babysex), data = .x))) %>% 
+  mutate(rmse_comb = map2_dbl(Comb_mod, test, ~rmse(model = .x, data = .y)),
+         rmse_main = map2_dbl(main_mod, test, ~rmse(model = .x, data = .y)),
+         rmse_other = map2_dbl(other_mod, test, ~rmse(model = .x, data = .y)))
+
+cv_df2 %>% 
+  select( rmse_comb, rmse_main, rmse_other) %>% 
+  gather(key = model, value = rmse) %>% 
+  ggplot(aes(x = fct_inorder(model), y = rmse)) + 
+  geom_violin() + 
+  labs(x = "Model", 
+       y = "RMSE") +
+  ggtitle("Violin plot of RMSE for 3 models")
+
+```
+
+Specific value of RMSE 
+```{r}
+cv_df2 %>% 
+  select( rmse_comb, rmse_main, rmse_other) %>% 
+  gather(key = model, value = rmse) %>% 
+  group_by(model) %>% 
+  summarise(mean(rmse)) %>% 
+  mutate(rmse = `mean(rmse)`) %>% 
+  select(-`mean(rmse)`) %>% 
+  knitr::kable(digits = 4)
+  
+```
+
+From the Violin plot of RMSE for 3 models, we can see that the comb model has the lowest RMSE value among the three models. For other 2 models, the three way interaction model has a rather lower RMSE thah the main effect model. 
+
+The term RMSE is always between 0 and 1, 0.7 is comparatively high in this case.
 
 ```{r}
 
