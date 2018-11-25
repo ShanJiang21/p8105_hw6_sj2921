@@ -192,6 +192,18 @@ summary(birth_weight$pnumsga)
 
 * There are 2 variables containing all 0s as their observation value: `pnumlbw ` and `pnumsga` in the birth weight data, we would **exclude** them in our model.
 
+#### I. The **hypothesis only model** is based on variables more relevant to **physical aspects** of mother :
+
+1. Baby's sex(which can be a potential interaction term, we may stratify our analysis by sex);
+
+2. Also, the health status of mother who gave birth to the baby is also important, this model contains the `race` of mother, `gestational age` in weeks, mother’s `weight gain`, `height` and so on. The most obvious one is mother’s age at delivery (a strong negative correlation in literature), the birth history, measured by `parity`, can provide important context for understanding mom's health, the average number of cigarettes smoked during the pregnancy, which is a significant exposure for affecting child's health is also included in the model.  
+
+3. Meanwhile, I chose family monthly income as an indicator of SES of the family, which can be informative for important social factor for analysis.
+
+4. Correlation and Collinearity: The `mheigth`(mother’s height) and `ppbmi`(mother’s pre-pregnancy BMI) is clearly correlated, also we can see that the `ppwt`, `delwt` and `wtgain` are highly collinearlized because we can simply derive the weight gain `wtgain` from the first two variables, and it implies that the `wegain` is a linear combination of the `ppwt`, `delwt`.  So we have to drop the `wtgain` if we want to include the `ppwt` and `delwt`at the same time. For parsimonous reason, we would only include `wtgain`in our model. 
+
+#### II. For constructing a model precisely correlated with the outcome variable, we simply do a correlation matrix with the birthweight.
+
 ```{r}
 ## Exploration of correlation for numeric variables in dataset.
 correlation_df = birth_weight %>%
@@ -210,101 +222,110 @@ correlation_df %>%
     knitr::kable(digits = 4) 
 ```
 
+while the five variables has a moderate correlation with the birthweight of the baby, we still need to include the sex in stratified ananlysis by keeping sex as a control variable.
+
+#### III. Combination of birthweight literature and data-driven model-building 
+
+The last alternative for birthweight may be selected as a combination of these two models. 
 
 
-I. The **hypothesis only model** is based on variables more relevant to **physical aspects** of:
+### 1.Modeling process
 
-1. Baby's sex(which can be a potential interaction term, we may stratify our analysis by sex);
+#### I.based on a hypothesized structure for the factors that underly birthweight
 
-2. Both the `babies length` and `head circumference` which are most likely to influence the babies' weight, however, it is unlikely to intervene the baby longer or have a larger head.
-
-3. Also, the health status of mother who gave birth to the baby is also important, this model contains the gestational age in weeks, mother’s weight gain, height,and so on. The most obvious one is mother’s age at delivery (a strong negative correlation in literature), the birth history, measured by `parity`, can provide important context for understanding mom's health, the average number of cigarettes smoked during the pregnancy, which is a significant exposure for affecting child's health is also included in the model.  
-
-4. Meanwhile, I chose family monthly income as an indicator of SES of the family, which can be informative for important social factor for analysis.
-
-5. Correlation and Collinearity: The `mheigth`(mother’s height) and `ppbmi`(mother’s pre-pregnancy BMI) is clearly correlated, also we can see that the `ppwt`, `delwt` and `wtgain` are highly collinearlized because we can simply derive the weight gain `wtgain` from the first two variables, and it implies that the `wegain` is a linear combination of the `ppwt`, `delwt`.  So we have to drop the `wtgain` if we want to include the `ppwt` and `delwt`at the same time. For parsimonous reason, we would only include `wtgain`in our model. 
-
-II. For constructing a model precisely correlated with the outcome variable, we simply do a correlation matrix with the birthweight.
-
-III. Combination of birthweight literature and data-driven model-building 
-
-
-#### based on a hypothesized structure for the factors that underly birthweight
-```{r}
-
-```
-
-
-
-#### Combination of birthweight literature and data-driven model-building 
-
-```{r}
-
-```
-
-(2) Stepwise elimination 
-
-Start with a full regression model for birthweight.
-
-```{r}
-## Stepwise with full model, after excluding two variables 
-full_mlr = birth_weight %>% 
-  lm(bwt ~  babysex + frace + mrace + malform +
-     bhead + blength + fincome + gaweeks+ menarche + mheight + momage + 
-     parity + ppbmi + smoken + wtgain, data = . )
-
-summary(full_mlr)
-```
+Stepwise elimination 
 
 * From the exploration analysis, the baseline of `mrace` and `frace` are 1，denoting all other races are compared to the White. The baseline of sex is 0 as male. 
 
-* The full model has an R-square of 0.7116 and the adjusted R-square is 0.7106. 
+* The full model has an R-square of 0.7183 and the adjusted R-square is 0.717, while the `menarche` and `malform1 `and `frace8` shows high p-value, we may drop the one with largest_value.
+
+####  (1). Hypothesized model 
 
 ```{r}
-## Cross Validation 
+hyp_mlr = birth_weight %>% 
+  lm(bwt ~  babysex  +
+     mrace  + fincome + gaweeks + mheight  + 
+     parity + smoken + wtgain, data = . )
+
+summary(hyp_mlr)
+```
+
+* The Hypothesized model has an R square of 0.3125 and a 0.3109 for Adjusted R-squared, which decreases little from the full model proposed above, meaning that the explanation of variables here is okay.
+
+####  (2). Data_driven model: 
+
+```{r}
+Corr_mlr = birth_weight %>% 
+  lm(bwt ~  babysex  + 
+     bhead + blength + fincome + 
+     delwt + gaweeks + wtgain , data = . )
+
+summary(Corr_mlr)
+```
+
+* Both the `babies length` and `head circumference` which are most likely to influence the babies' weight, however, it is unlikely to intervene the baby longer or have a larger head.
+
+* The Data-driven model has an R square of 0.702 and an Adjusted R-squared is 0.7016, varies a lot from the hypothesized model proposed above, meaning that the model should include the physical indicators of babies to fit better.
+
+
+#### (3). Combination of birthweight literature and data-driven model-building 
+
+```{r}
+Comb_mlr = birth_weight %>% 
+  lm(bwt ~  babysex  + mrace  +
+     bhead + blength + fincome + gaweeks + mheight  + 
+     parity + smoken + wtgain + delwt , data = . )
+
+summary(Comb_mlr)
+```
+
+
+The combined model owns the highest R square value 0.7181 and a high adjusted-R square value of 0.7173 , higher than the above two models, so we shall test whether it can the best one by cross validation.
+
+### 2.Cross Validation 
+
+```{r}
 set.seed(1)
 
 cv_df = crossv_mc(birth_weight, 100) 
 
-## Train data sets and test data sets
-cv_df %>% 
-  pull(train) %>% 
-  .[[1]] %>% 
-  as_tibble
-cv_df %>% 
-  pull(test) %>% 
-  .[[1]] %>% 
-  as_tibble
-
-
+## construct our train dataset and test dataset 
 cv_df =
   cv_df %>% 
   mutate(train = map(train, as_tibble),
          test = map(test, as_tibble))
 
-cv_df = 
-  cv_df %>% 
-  mutate(lin_mod1    = map(train, ~lm(bwt ~ babysex + fincome + gaweeks + parity + smoken + wtgain, , data = .x)),
-         lin_ = map(train, ~lm( , data = .x)),
-         lin_comb = map(train, ~lm(bwt ~ babysex + fincome + gaweeks + parity + smoken + wtgain data = .x))) %>% 
-  mutate(rmse_lin    = map2_dbl(lin_mod, test, ~rmse(model = .x, data = .y)),
-         rmse_nonlin = map2_dbl(nonlin_mod, test, ~rmse(model = .x, data = .y)),
-         rmse_wiggly = map2_dbl(wiggly_mod, test, ~rmse(model = .x, data = .y)))
-
-
-lin_mod = lm(y ~ x, data = birth_weight)
-birth_weight %>% 
-ggplot(aes(x = fincome, y =  bwt )) + 
-       geom_point() + 
-       theme_bw()
+## Mutate Train data sets and test data sets
+cv_df <- cv_df %>% 
+    mutate(hyp_mlr = map(train, ~lm(bwt ~  babysex + mrace  + fincome + gaweeks + mheight  + 
+     parity + smoken + wtgain, data = .x)),
+           Corr_mlr = map(train, ~lm(bwt ~ bhead + blength + gaweeks + wtgain + delwt, data = .x)), 
+           Comb_mlr = map(train, ~lm(bwt ~ babysex + bhead + blength + 
+                    mrace  + fincome + gaweeks + mheight + 
+                    parity + smoken + wtgain + delwt , data = .x))) %>% 
+    mutate(rmse_hyp = map2_dbl(hyp_mlr, test, ~rmse(model = .x, data = .y)),
+           rmse_Corr = map2_dbl(Corr_mlr, test, ~rmse(model = .x, data = .y)),
+           rmse_Comb = map2_dbl(Comb_mlr, test, ~rmse(model = .x, data = .y)))
 ```
 
 
-3. fit a model and plot
+### 3. fit a model and plot
+
+I’m mostly focused on RMSE as a way to compare these models, and the plot below shows the distribution of RMSE values for each candidate model.
+
 ```{r}
-birth_weight %>%  
-  ggplot(aes(x = blength , y = bwt )) + 
-  geom_point(alpha = .5)
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin() +
+  ggtitle("Volin plot of RMSE in each candidate model")
 ```
 
+Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+
+```{r}
+
+```
 
