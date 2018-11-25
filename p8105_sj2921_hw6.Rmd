@@ -413,7 +413,4 @@ From the Violin plot of RMSE for 3 models, we can see that the comb model has th
 
 The term RMSE is always between 0 and 1, 0.7 is comparatively high in this case.
 
-```{r}
-
-```
 
