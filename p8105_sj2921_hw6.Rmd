@@ -2,16 +2,26 @@
 title: "p8105_hw6_sj2921"
 author: "Shan Jiang"
 date: "11/16/2018"
-output: github_document
+output:  
+  github_document:
+    toc: TRUE
 ---
 ## problem 1
 ```{r}
+knitr::opts_chunk$set(
+  out.width = "90%",
+  warning = FALSE,
+  message = FALSE
+)
+
 library(tidyverse)
 library(broom)
 library(Hmisc)
 library(modelr)
 library(mgcv)
 library(ggplot2)
+
+
 ```
 
 ```{r}
@@ -168,31 +178,49 @@ skimr::skim(birth_weight )
 ```{r}
 ## Distribution of outcome variable
 library("gridExtra")
-his = birth_weight %>% 
+his = birth_weight %>%
   ggplot(aes(x = bwt, y = ..density..)) + 
   geom_histogram(colour = "black", fill = "white") +
   geom_density(color = "red") +
-  ggtitle("Histogram of birthweight variable")
+  labs(title = "Histogram of birthweight variable")
 
 box = birth_weight %>% 
   ggplot(aes(y = bwt)) + 
   labs(y = "birthweight") +
   geom_boxplot() +
-  ggtitle("Boxplot of birthweight variable")
+  labs(title = "Boxplot of birthweight variable")
 
-grid.arrange(his, box, nrow = 1, top = "Distribution of outcome variable-Birthweight") 
+qq_plot = birth_weight %>% 
+  ggplot(aes(sample = bwt)) + 
+  stat_qq() + 
+  stat_qq_line() +
+  labs(title = "QQplot of birthweight variable")
+
+res = birth_weight %>% 
+  ggplot(aes(x = bwt , y = )) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  geom_segment(aes(xend = hp, yend = predicted), alpha = .2) +  # alpha to fade lines
+  geom_point() +
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw() 
+  
+
+grid.arrange(his, box, qq_plot, nrow = 2, top = "Distribution of outcome variable-Birthweight") 
 
 ```
 
-The distribution of `birthweight` is quite normal, which satisfies the linear regression model assumptions.
+The distribution of `birthweight` is quite normalized, which satisfies the linear regression model assumptions.
 
 ```{r}
 ## Excluding two variables contatining many 0s.
-summary(birth_weight$pnumlbw )
+summary(birth_weight$pnumlbw)
 summary(birth_weight$pnumsga)
 ```
 
 * There are 2 variables containing all 0s as their observation value: `pnumlbw ` and `pnumsga` in the birth weight data, we would **exclude** them in our model.
+
+
+###  Model selection criteria
 
 #### I. The **hypothesis only model** is based on variables more relevant to **physical aspects** of mother :
 
@@ -235,7 +263,7 @@ The last alternative for birthweight may be selected as a combination of these t
 
 #### I.based on a hypothesized structure for the factors that underly birthweight
 
-Stepwise elimination 
+* Followed a stepwise elimination, we then need to build our own models.
 
 * From the exploration analysis, the baseline of `mrace` and `frace` are 1，denoting all other races are compared to the White. The baseline of sex is 0 as male. 
 
@@ -398,7 +426,8 @@ cv_df2 %>%
 
 ```
 
-Specific value of RMSE in 3 models 
+Specific value of RMSE in these 3 models 
+
 ```{r}
 cv_df2 %>% 
   select( rmse_comb, rmse_main, rmse_other) %>% 
@@ -413,6 +442,6 @@ cv_df2 %>%
 
 From the Violin plot of RMSE for 3 models, we can see that the comb model has the lowest RMSE value among the three models. For other 2 models, the three way interaction model has a rather lower RMSE thah the main effect model. 
 
-The term RMSE is always between 0 and 1, 0.7 is comparatively high in this case.
+The term RMSE is 0.7, is comparatively high in this case.
 
 
