@@ -54,11 +54,13 @@ Bal_logit =
 ## Obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing non-white victims to white victims keeping all other variables fixed.
 Bal_logit %>% 
   broom::tidy() %>% 
-  mutate(OR = exp(estimate)) %>%  ## sig.level = 0.05, critical value = 1.96
+  mutate(OR = exp(estimate)) %>%  ## sig.level = 0.05, critical value = 1.96 
+  ## Maybe we should use the bootstrap for generating SE.
   mutate(CI.lower =  exp(estimate - std.error * 1.96)) %>% 
   mutate(CI.higher =  exp(estimate + std.error * 1.96)) %>%
   select(term, log_OR = estimate, OR, CI.lower, CI.higher, p.value) %>% 
   knitr::kable(digits = 3)
+
 ```
 
 *Comment*: the estimator of odds ratio is 0.441 < 1 (95% CI: [0.313, 0.620]), implying that in Baltimore city, the odds of being murdered is 0.441 times lower among non-white citizens than white. Because the odds ratio is under 1, which means being non-white can exert protective effect for avoiding being murdered.  
@@ -117,7 +119,7 @@ city_murder %>%
   theme_bw() +
   theme(legend.position = "none",
         legend.direction = "horizontal",
-         legend.key.size = unit(0.06, "cm")) + 
+         legend.key.size = unit(0.06, "cm"))+
   coord_flip() + 
       labs(x = "City State",
            y = "City Homicide Odds ratio", 
@@ -168,7 +170,7 @@ skimr::skim(birth_weight )
 library("gridExtra")
 his = birth_weight %>% 
   ggplot(aes(x = bwt, y = ..density..)) + 
-  geom_histogram() +
+  geom_histogram(colour = "black", fill = "white") +
   geom_density(color = "red") +
   ggtitle("Histogram of birthweight variable")
 
@@ -380,7 +382,7 @@ cv_df2 <- cv_df2 %>%
                     mrace  + fincome + gaweeks + mheight + 
                     parity + smoken + wtgain + delwt , data = .x)), 
          main_mod = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)), 
-         other_mod = map(train, ~lm(bwt ~ (bhead * blength * babysex), data = .x))) %>% 
+         other_mod = map(train, ~lm(bwt ~ (bhead * blength + blength * babysex + bhead * babysex + bhead * blength * babysex), data = .x))) %>% 
   mutate(rmse_comb = map2_dbl(Comb_mod, test, ~rmse(model = .x, data = .y)),
          rmse_main = map2_dbl(main_mod, test, ~rmse(model = .x, data = .y)),
          rmse_other = map2_dbl(other_mod, test, ~rmse(model = .x, data = .y)))
@@ -396,7 +398,7 @@ cv_df2 %>%
 
 ```
 
-Specific value of RMSE 
+Specific value of RMSE in 3 models 
 ```{r}
 cv_df2 %>% 
   select( rmse_comb, rmse_main, rmse_other) %>% 
