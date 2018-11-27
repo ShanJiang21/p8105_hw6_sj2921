@@ -13,16 +13,19 @@ knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE
 )
+```
 
+```{r}
 library(tidyverse)
 library(broom)
 library(Hmisc)
 library(modelr)
 library(mgcv)
 library(ggplot2)
-
-
+library(ggcorrplot)
 ```
+
+### 1.1 Tidy the dataset
 
 ```{r}
 ### Import the raw data.
@@ -30,7 +33,6 @@ library(ggplot2)
 homicide_raw = read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv")
 ```
 
-### 1.1 Tidy the dataset
 
 ```{r}
 homicide_df = homicide_raw %>% 
@@ -253,6 +255,8 @@ correlation_df %>%
 ```
 
 while the five variables has a moderate correlation with the birthweight of the baby, we still need to include the sex in stratified ananlysis by keeping sex as a control variable.
+
+
 
 #### III. Combination of birthweight literature and data-driven model-building 
 
