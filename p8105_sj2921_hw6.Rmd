@@ -144,7 +144,8 @@ city_murder %>%
 
 ## Problem 2
 
-### Importation and cleaning the data 
+### 1.Importation and cleaning the data 
+
 ```{r}
 birth_weight = read_csv("./Data/birthweight.csv") 
   
@@ -173,7 +174,7 @@ skimr::skim(birth_weight )
 
 
 
-2. Model procedure: 
+### 2. Model procedure: 
 
 (1) Exploration of correlation and distribution.
 
@@ -205,9 +206,24 @@ res = birth_weight %>%
   geom_point() +
   geom_point(aes(y = predicted), shape = 1) +
   theme_bw() 
-  
 
-grid.arrange(his, box, qq_plot, nrow = 2, top = "Distribution of outcome variable-Birthweight") 
+## Add a sex stratified graph  
+mean_bwt = birth_weight %>% 
+  group_by(babysex) %>% 
+  summarise(avg_bwt = mean(bwt)) 
+
+sex = birth_weight %>% 
+    ggplot(aes(x = bwt )) +
+    geom_histogram(binwidth = .5, colour = "black", fill = "white") +
+    geom_vline(data = mean_bwt, aes(xintercept = avg_bwt, 
+               colour =  babysex ),
+               linetype = "dashed", size = 1.2) + 
+  facet_grid(babysex ~ .) +
+    theme_bw() +
+    labs(title = "Histogram of birthweight variable by sex",
+         subtitle = "dash line = mean of birthweight")
+
+grid.arrange(his, box, qq_plot, sex, nrow = 2, top = "Distribution of outcome variable-Birthweight") 
 
 ```
 
